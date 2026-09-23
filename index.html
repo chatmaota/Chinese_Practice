@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Thai → Chinese Stroke Practice Studio</title>
+<script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.7/dist/hanzi-writer.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.26.0/dist/index.js"></script>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--ink:#172033;--muted:#667085;--line:#ccd5e2;--soft:#eef4fb}
+*{box-sizing:border-box}body{font-family:Arial,"Noto Sans Thai","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);margin:0}
+.w{max-width:1120px;margin:auto;padding:22px}.c{background:#fff;border-radius:18px;padding:22px;margin-bottom:16px;box-shadow:0 7px 25px #0001}
+h1{margin:0 0 7px}.sub{color:var(--muted);margin-bottom:18px}.row{display:flex;gap:10px;flex-wrap:wrap}
+textarea,input[type=text]{flex:1;min-width:260px;padding:13px 15px;border:1px solid var(--line);border-radius:11px;font-size:20px;font-family:inherit}
+textarea{min-height:84px;resize:vertical}button{padding:11px 15px;border:0;border-radius:10px;background:var(--ink);color:white;cursor:pointer;font-size:15px}
+button.alt{background:#e9eef6;color:var(--ink)}button:disabled{opacity:.5;cursor:not-allowed}.cn{font-family:"KaiTi","STKaiti","Microsoft YaHei",sans-serif;font-size:48px;font-weight:700;letter-spacing:3px;margin:15px 0}
+.chars{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}.cc{text-align:center}.box{width:140px;height:140px;border:1px solid var(--line);border-radius:12px}.lab{font-size:27px;font-weight:bold;margin-top:6px}
+.opts{margin-top:14px;display:flex;gap:18px;flex-wrap:wrap}.status{margin-top:13px;font-weight:bold;min-height:22px}.note{margin-top:16px;background:var(--soft);padding:13px;border-radius:11px;line-height:1.55}
+.tag{font-size:13px;color:var(--muted);margin-bottom:6px}.error{color:#b42318}.ok{color:#067647}
+@media(max-width:620px){.box{width:105px;height:105px}.cn{font-size:38px}}
+</style>
+</head>
+<body>
+<div class="w">
+ <div class="c">
+  <h1>🇹🇭 → 🇨🇳 Chinese Stroke Practice Studio</h1>
+  <div class="sub">พิมพ์ภาษาไทย → แปลเป็นภาษาจีน → ดูลำดับขีด → ฝึกเขียนตาม</div>
+
+  <div class="tag">ภาษาไทย</div>
+  <div class="row">
+   <textarea id="thai" placeholder="เช่น ผมทำงานที่โรงงาน">ผมทำงานที่โรงงาน</textarea>
+   <button id="translateBtn" onclick="translateThai()">แปลเป็นจีน</button>
+  </div>
+  <div id="transStatus" class="status"></div>
+
+  <div style="margin-top:18px" class="tag">ภาษาจีน — แก้ไขเองได้ก่อนสร้าง Animation</div>
+  <div class="row">
+   <input id="txt" type="text" value="我在工厂工作。" maxlength="80">
+   <button onclick="build()">สร้างแบบฝึก</button>
+  </div>
+
+  <div id="bigChinese" class="cn">我在工厂工作。</div>
+<div id="pinyinLine" style="font-size:24px;font-weight:700;margin:-4px 0 18px;color:#344054">Wǒ zài gōngchǎng gōngzuò.</div>
+
+  <div class="row">
+   <button onclick="play()">▶ วาดทั้งหมด</button>
+   <button class="alt" onclick="loop()">🔁 เล่นวน</button>
+   <button class="alt" onclick="stopLoop()">⏹ หยุด</button>
+   <button class="alt" onclick="quiz()">✍️ เขียนตาม</button>
+   <button class="alt" onclick="speakChinese()">🔊 ฟังเสียงจีน</button>
+  </div>
+
+  <div class="opts">
+   <label>ความเร็ว <input id="spd" type="range" min=".5" max="2.5" step=".1" value="1.2"></label>
+   <label><input id="outline" type="checkbox" checked onchange="build()"> เส้นโครง</label>
+  </div>
+  <div id="status" class="status"></div>
+ </div>
+
+ <div class="c">
+  <div id="chars" class="chars"></div>
+  <div class="note">
+   <b>วิธีใช้:</b> หลังแปลแล้ว ระบบจะสร้าง Stroke Animation ให้อัตโนมัติ • คลิกตัวอักษรเพื่อดูเฉพาะตัว • “เขียนตาม” ใช้เมาส์หรือนิ้วลากตามลำดับขีด • “ฟังเสียงจีน” ใช้เสียงภาษาจีนที่มีในเครื่อง/เบราว์เซอร์
+  </div>
+ </div>
+
+ <div class="c">
+  <div class="note"><b>หมายเหตุเรื่องการแปล:</b> ไฟล์นี้ลองแปลผ่านบริการออนไลน์จากเบราว์เซอร์ จึงต้องต่ออินเทอร์เน็ต และบางเครือข่ายบริษัทอาจบล็อกคำขอแปลได้ หากแปลออนไลน์ไม่ได้ คุณยังพิมพ์/วางภาษาจีนในช่องจีนแล้วใช้ Animation ได้ตามปกติ</div>
+ </div>
+</div>
+
+<script>
+let ws=[], looping=false, gen=0;
+const hanziRE=/[\u3400-\u9FFF\uF900-\uFAFF]/;
+function chineseChars(){return [...document.getElementById('txt').value].filter(x=>hanziRE.test(x))}
+function updatePinyin(){
+  const s=txt.value.trim();
+  try{
+    if(window.pinyinPro && pinyinPro.pinyin){
+      pinyinLine.textContent=pinyinPro.pinyin(s,{toneType:'symbol',type:'string',nonZh:'consecutive'});
+    }else{
+      pinyinLine.textContent='กำลังโหลด Pinyin…';
+    }
+  }catch(e){ pinyinLine.textContent=''; }
+}
+
+async function translateThai(){
+ const q=document.getElementById('thai').value.trim();
+ if(!q){transStatus.innerHTML='<span class="error">กรุณาพิมพ์ภาษาไทยก่อน</span>';return}
+ translateBtn.disabled=true; transStatus.textContent='กำลังแปล…';
+ try{
+   const url='https://translate.googleapis.com/translate_a/single?client=gtx&sl=th&tl=zh-CN&dt=t&q='+encodeURIComponent(q);
+   const r=await fetch(url);
+   if(!r.ok) throw new Error('HTTP '+r.status);
+   const data=await r.json();
+   const translated=(data[0]||[]).map(x=>x[0]||'').join('').trim();
+   if(!translated) throw new Error('No translation');
+   txt.value=translated;
+   bigChinese.textContent=translated;
+   transStatus.innerHTML='<span class="ok">✓ แปลแล้ว</span>';
+   build();
+ }catch(e){
+   transStatus.innerHTML='<span class="error">แปลออนไลน์ไม่สำเร็จในเครือข่าย/เบราว์เซอร์นี้ — พิมพ์ภาษาจีนในช่องด้านล่างได้โดยตรง</span>';
+ }finally{translateBtn.disabled=false}
+}
+
+function build(){
+ looping=false; ws=[]; gen++;
+ const a=chineseChars(), holder=document.getElementById('chars');
+ holder.innerHTML=''; bigChinese.textContent=txt.value; updatePinyin();
+ if(!a.length){status.textContent='ใส่ตัวอักษรจีนอย่างน้อย 1 ตัว';return}
+ a.forEach((ch,i)=>{
+   const d=document.createElement('div');d.className='cc';
+   const b=document.createElement('div');b.className='box';b.id='h'+gen+'_'+i;
+   const l=document.createElement('div');l.className='lab';l.textContent=ch;
+   d.append(b,l);holder.appendChild(d);
+   const w=HanziWriter.create(b.id,ch,{
+     width:window.innerWidth<=620?105:140,height:window.innerWidth<=620?105:140,padding:9,
+     showOutline:outline.checked,showCharacter:false,
+     strokeAnimationSpeed:+spd.value,delayBetweenStrokes:180,
+     strokeColor:'#172033',outlineColor:'#d8dee8',highlightColor:'#e5484d'
+   });
+   ws.push(w); b.onclick=()=>w.animateCharacter();
+ });
+ status.textContent='พร้อมฝึก '+a.length+' ตัวอักษร';
+}
+function one(w){return new Promise(r=>w.animateCharacter({onComplete:()=>setTimeout(r,200)}))}
+async function play(){looping=false;status.textContent='กำลังวาด…';for(const w of ws)await one(w);status.textContent='✓ วาดครบแล้ว'}
+async function loop(){if(!ws.length)return;looping=true;status.textContent='กำลังเล่นวน…';while(looping){for(const w of ws){if(!looping)break;await one(w)}if(looping)await new Promise(r=>setTimeout(r,600))}}
+function stopLoop(){looping=false;status.textContent='หยุดแล้ว'}
+async function quiz(){looping=false;status.textContent='เขียนตามทีละตัว';for(const w of ws)await new Promise(r=>w.quiz({showHintAfterMisses:2,highlightOnComplete:true,onComplete:()=>setTimeout(r,200)}));status.textContent='✓ ฝึกครบแล้ว'}
+function speakChinese(){
+ if(!('speechSynthesis' in window)){status.textContent='เบราว์เซอร์นี้ไม่รองรับเสียงพูด';return}
+ speechSynthesis.cancel();
+ const u=new SpeechSynthesisUtterance(txt.value);u.lang='zh-CN';u.rate=.8;
+ const voices=speechSynthesis.getVoices();const v=voices.find(x=>x.lang&&x.lang.toLowerCase().startsWith('zh'));if(v)u.voice=v;
+ speechSynthesis.speak(u);
+}
+txt.addEventListener('input',()=>{bigChinese.textContent=txt.value;updatePinyin()});
+txt.addEventListener('keydown',e=>{if(e.key==='Enter')build()});
+thai.addEventListener('keydown',e=>{if(e.ctrlKey&&e.key==='Enter')translateThai()});
+build(); updatePinyin();
+</script>
+</body></html>
