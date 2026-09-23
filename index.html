@@ -39,12 +39,12 @@ body.desktop .grid{grid-template-columns:390px 1fr}
 <section class="card">
 <h2><span class="step">1</span>ภาษาไทย</h2>
 <textarea id="thai">ผมทำงานที่โรงงาน</textarea>
-<button class="full" onclick="translateThai()">文 แปลเป็นภาษาจีน</button>
+<div class="row"><button style="flex:1" onclick="translateThai()">文 แปลเป็นภาษาจีน</button><button class="soft" onclick="clearAll()">✕ Clear</button></div>
 <div id="transStatus" class="status"></div>
 
 <h2 style="margin-top:22px"><span class="step">2</span>ภาษาจีน</h2>
 <input id="txt" type="text" value="我在工厂工作。">
-<button class="full soft" onclick="build()">สร้างแบบฝึก / 更新</button>
+
 
 <h2 style="margin-top:22px"><span class="step">3</span>ตัวเลือก</h2>
 <div class="opts">
@@ -67,6 +67,11 @@ let writers=[], looping=false, gen=0;
 const hz=/[\u3400-\u9FFF\uF900-\uFAFF]/;
 function setView(v){document.body.classList.remove('mobile','desktop');document.querySelectorAll('.view button').forEach(x=>x.classList.remove('active'));if(v!=='auto'){document.body.classList.add(v);document.getElementById(v==='mobile'?'mobV':'deskV').classList.add('active')}else autoV.classList.add('active');localStorage.setItem('view',v);build()}
 function updatePinyin(){try{pinyin.textContent=pinyinPro.pinyin(txt.value,{toneType:'symbol',type:'string',nonZh:'consecutive'})}catch(e){pinyin.textContent=''}}
+function clearAll(){
+ looping=false; thai.value=''; txt.value=''; transStatus.textContent='';
+ big.textContent=''; pinyin.textContent=''; chars.innerHTML='';
+ status.textContent=''; writers=[]; thai.focus();
+}
 async function translateThai(){
  let q=thai.value.trim();if(!q)return;
  transStatus.textContent='กำลังแปล…';
@@ -92,6 +97,7 @@ async function loop(){looping=true;while(looping){for(let w of writers){if(!loop
 function stopLoop(){looping=false}
 async function quiz(){looping=false;for(let w of writers)await new Promise(r=>w.quiz({showHintAfterMisses:2,onComplete:()=>setTimeout(r,180)}))}
 function speak(){speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(txt.value);u.lang='zh-CN';u.rate=.8;let vs=speechSynthesis.getVoices(),v=vs.find(x=>x.lang&&x.lang.toLowerCase().startsWith('zh'));if(v)u.voice=v;speechSynthesis.speak(u)}
-txt.addEventListener('input',()=>{big.textContent=txt.value;updatePinyin()});
+let rebuildTimer;
+txt.addEventListener('input',()=>{big.textContent=txt.value;updatePinyin();clearTimeout(rebuildTimer);rebuildTimer=setTimeout(build,250)});
 let saved=localStorage.getItem('view')||'auto';setView(saved);
 </script></body></html>
