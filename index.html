@@ -99,5 +99,17 @@ async function quiz(){looping=false;for(let w of writers)await new Promise(r=>w.
 function speak(){speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(txt.value);u.lang='zh-CN';u.rate=.8;let vs=speechSynthesis.getVoices(),v=vs.find(x=>x.lang&&x.lang.toLowerCase().startsWith('zh'));if(v)u.voice=v;speechSynthesis.speak(u)}
 let rebuildTimer;
 txt.addEventListener('input',()=>{big.textContent=txt.value;updatePinyin();clearTimeout(rebuildTimer);rebuildTimer=setTimeout(build,250)});
+// Accept prefilled Chinese sentences from Daily Chinese Reading (?text=...).
+function loadLinkedPractice(){
+ const params=new URLSearchParams(window.location.search);
+ const linked=params.get('text') || params.get('sentence');
+ if(!linked)return;
+ const value=linked.trim().slice(0,240);
+ if(!value || !/[\u3400-\u9FFF\uF900-\uFAFF]/.test(value))return;
+ txt.value=value;
+ thai.value='';
+ transStatus.textContent='✓ โหลดประโยคจาก Daily Chinese Reading แล้ว';
+}
+loadLinkedPractice();
 let saved=localStorage.getItem('view')||'auto';setView(saved);
 </script></body></html>
